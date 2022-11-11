@@ -1,8 +1,19 @@
 # Integrate Home Assistant
-## Auto discovery
-Home Assistant discovery is enabled by default on all binaries and platformio configurations except for UNO. With Arduino IDE please read the [advanced configuration section](../upload/advanced-configuration#auto-discovery) of the documentation.
 
-First enable discovery on your MQTT integration in HASS.
+Home Assistant provide the [MQTT integration](https://www.home-assistant.io/integrations/mqtt/) and through this integration it is possible to exploit and manage the messages published by OpenMQTTGateway.
+
+Once this integration on home assistant is configured with the same MQTT broker, it is possible to create devices manually or through the autodiscovery function.
+
+
+## Auto discovery
+
+From Home Assistant site 
+
+> The discovery of MQTT devices will enable one to use MQTT devices with only minimal configuration effort on the side of Home Assistant. The configuration is done on the device itself and the topic used by the device.
+
+On OpenMQTTGateway the Home Assistant discovery is enabled by default on all binaries and platformio configurations except for UNO. With Arduino IDE please read the [advanced configuration section](../upload/advanced-configuration#auto-discovery) of the documentation. Here are a few tips for activating discovery on Home Assistant, but for detailed configuration please refer to the Home Assistant website. 
+
+Enable discovery on your MQTT integration in HASS.
 
 ![](../img/OpenMQTTGateway-Configuration-Home-Assistant-Discovery-Integration.png)
 
@@ -22,8 +33,18 @@ OMG will use the auto discovery functionality of home assistant to create gatewa
 
 ![](../img/OpenMQTTGateway_Home_Assistant_MQTT_discovery.png)
 
+
+## MQTT Device Trigger and RF
+
+With OpenMQTTGateway [configured to receive RF signals](./setitup/rf.html) the messages are transmitted as indicated by [RCSwitch based gateway](./use/rf.html#rcswitch-based-gateway), so it is possible to receive a pulse every time the sensor discover a signal. 
+
+With autodiscovery enabled, HomeAssistant will discover a [MQTT Device Trigger](https://www.home-assistant.io/integrations/device_trigger.mqtt/) identified by the value field given in the mqtt argument. 
+
+
+
+
 ## Manual integration examples
-From @123, @finity, @denniz03, @jrockstad, @anarchking
+From @123, @finity, @denniz03, @jrockstad, @anarchking, @dkluivingh
 
 ### Door sensor
 ```yaml
@@ -142,14 +163,14 @@ Sensor:
 sensor:
   - platform: mqtt
     name: "Weight"
-    state_topic: "home/OpenMQTTGateway/BTtoMQTT/AAAAAAAAAAAA" # replace your mqtt topic here
+    state_topic: "home/OpenMQTTGateway/BTtoMQTT/AAAAAAAAAAAA" # replace your MQTT topic here
     value_template: '{{ value_json["weight"] }}'
     unit_of_measurement: "kg"
     icon: mdi:weight-kilogram
     
   - platform: mqtt
     name: "Impedance"
-    state_topic: "home/OpenMQTTGateway/BTtoMQTT/AAAAAAAAAAAA" # replace your mqtt topic here also
+    state_topic: "home/OpenMQTTGateway/BTtoMQTT/AAAAAAAAAAAA" # replace your MQTT topic here also
     value_template: '{{ value_json["impedance"] }}'
     unit_of_measurement: "Ohm"
     icon: mdi:omega
@@ -175,7 +196,23 @@ sensor:
   - platform: mqtt_room
     device_id: XX:XX:XX:XX:XX:XX   #Mac Address of device wanting to track
     name: you_are_in    # home assistant will show a sensor named (you are in) with its value being the name you gave the gateway
-    state_topic: "home/home_presence"
+    state_topic: "home/presence"
     #timeout:
     #away_timeout:
+```
+
+### Temperature sensor
+
+```yaml
+sensor:
+  - platform: mqtt
+    name: outdoor temp
+    state_topic: "home/OpenMQTTGateway/433toMQTT"
+    unit_of_measurement: '°C'
+    value_template: >
+      {% if value_json is defined and value_json.sensor == 125 %}
+      {{ value_json.tempc }}
+      {% else %}
+      {{ states('sensor.outdoor_temp') }}
+       {% endif %}
 ```
