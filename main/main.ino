@@ -27,6 +27,11 @@
 */
 #include "User_config.h"
 
+#include <Ticker.h>
+Ticker tkSecond;
+int PINWD0 = 26; //Salle
+int PINWD1 = 12; //Chambre et cuisine
+
 // Macros and structure to enable the duplicates removing on the following gateways
 #if defined(ZgatewayRF) || defined(ZgatewayIR) || defined(ZgatewaySRFB) || defined(ZgatewayWeatherStation) || defined(ZgatewayRTL_433)
 // array to store previous received RFs, IRs codes and their timestamps
@@ -160,6 +165,11 @@ struct GfSun2000Data {};
 #  include "config_RS232.h"
 #endif
 /*------------------------------------------------------------------------*/
+void DemiSecond_Tick()
+{
+  digitalWrite (PINWD0, !(digitalRead(PINWD0)));
+  digitalWrite (PINWD1, !(digitalRead(PINWD1)));
+}
 
 void setupTLS(bool self_signed = false, uint8_t index = 0);
 
@@ -172,6 +182,7 @@ char mqtt_server[parameters_size + 1] = MQTT_SERVER;
 char mqtt_port[6] = MQTT_PORT;
 char mqtt_topic[parameters_size + 1] = Base_Topic;
 char gateway_name[parameters_size + 1] = Gateway_Name;
+char watchdogPin[3] = Watchdog_Pin;
 #ifdef USE_MAC_AS_GATEWAY_NAME
 #  undef WifiManager_ssid
 #  undef ota_hostname
@@ -411,7 +422,7 @@ void pubMQTT(const char* topic, const char* payload, bool retainFlag) {
     client.publish(topic, payload, retainFlag);
 #endif
   } else {
-    Log.warning(F("Client not connected, aborting thes publication" CR));
+    Log.warning(F("Client not connected, aborting the publication" CR));
   }
 }
 
@@ -605,9 +616,13 @@ void setup() {
   pinMode(LED_SEND_RECEIVE, OUTPUT);
   pinMode(LED_INFO, OUTPUT);
   pinMode(LED_ERROR, OUTPUT);
+  pinMode(PINWD0, OUTPUT);
+  pinMode(PINWD1, OUTPUT);
   digitalWrite(LED_SEND_RECEIVE, !LED_SEND_RECEIVE_ON);
   digitalWrite(LED_INFO, !LED_INFO_ON);
   digitalWrite(LED_ERROR, !LED_ERROR_ON);
+  digitalWrite(PINWD0, LOW);
+  digitalWrite(PINWD1, LOW);
 
 #if defined(ESP8266) || defined(ESP32)
 #  ifdef ESP8266
@@ -631,9 +646,11 @@ void setup() {
 
 #  ifdef USE_MAC_AS_GATEWAY_NAME
   String s = WiFi.macAddress();
-  sprintf(gateway_name, "%.2s%.2s%.2s%.2s%.2s%.2s",
+  sprintf(gateway_name, "%s_%.2s%.2s%.2s%.2s%.2s%.2s", Gateway_Short_Name,
+//sprintf(gateway_name, "%.2s%.2s%.2s%.2s%.2s%.2s",
           s.c_str(), s.c_str() + 3, s.c_str() + 6, s.c_str() + 9, s.c_str() + 12, s.c_str() + 15);
-  snprintf(WifiManager_ssid, MAC_NAME_MAX_LEN, "%s_%s", Gateway_Short_Name, gateway_name);
+  strcpy(WifiManager_ssid ,gateway_name);          
+//snprintf(WifiManager_ssid, MAC_NAME_MAX_LEN, "%s_%s", Gateway_Short_Name, gateway_name);
   strcpy(ota_hostname, WifiManager_ssid);
   Log.notice(F("OTA Hostname: %s.local" CR), ota_hostname);
 #  endif
@@ -838,6 +855,7 @@ void setup() {
   Log.notice(F("OpenMQTTGateway modules: %s" CR), jsonChar);
 #endif
   Log.notice(F("************** Setup OpenMQTTGateway end **************" CR));
+  tkSecond.attach_ms(500,DemiSecond_Tick);
 }
 
 #if defined(ESP8266) || defined(ESP32)
@@ -1076,6 +1094,8 @@ void saveMqttConfig() {
   json["mqtt_broker_cert"] = mqtt_cert;
   json["mqtt_ss_index"] = mqtt_ss_index;
   json["ota_server_cert"] = ota_server_cert;
+  json["mqtt_port"] = mqtt_port;
+  json["watchdogPin"] = watchdogPin;
 
   File configFile = SPIFFS.open("/config.json", "w");
   if (!configFile) {
@@ -1142,6 +1162,8 @@ void setup_wifimanager(bool reset_settings) {
           strcpy(gateway_name, json["gateway_name"]);
         if (json.containsKey("ota_server_cert"))
           ota_server_cert = json["ota_server_cert"].as<const char*>();
+        if (json.containsKey("watchdogPin"))
+          strcpy(watchdogPin, json["watchdogPin"]);          
       } else {
         Log.warning(F("failed to load json config" CR));
       }
@@ -1161,8 +1183,9 @@ void setup_wifimanager(bool reset_settings) {
   WiFiManagerParameter custom_mqtt_pass("pass", "mqtt pass", mqtt_pass, parameters_size);
   WiFiManagerParameter custom_mqtt_topic("topic", "mqtt base topic", mqtt_topic, mqtt_topic_max_size);
   WiFiManagerParameter custom_mqtt_secure("secure", "mqtt secure", "1", 1, mqtt_secure ? "type=\"checkbox\" checked" : "type=\"checkbox\"");
-  WiFiManagerParameter custom_mqtt_cert("cert", "mqtt broker cert", mqtt_cert.c_str(), 2048);
+  WiFiManagerParameter custom_mqtt_cert("cert", "<br/>mqtt broker cert", mqtt_cert.c_str(), 2048);
   WiFiManagerParameter custom_gateway_name("name", "gateway name", gateway_name, parameters_size);
+  WiFiManagerParameter custom_watchdogPin("wdpin", "WatchdogPin", watchdogPin, parameters_size);
 #  endif
   //WiFiManager
   //Local intialization. Once its business is done, there is no need to keep it around
@@ -1193,6 +1216,7 @@ void setup_wifimanager(bool reset_settings) {
   wifiManager.addParameter(&custom_mqtt_cert);
   wifiManager.addParameter(&custom_gateway_name);
   wifiManager.addParameter(&custom_mqtt_topic);
+  wifiManager.addParameter(&custom_watchdogPin);
 #  endif
   //set minimum quality of signal so it ignores AP's under that quality
   wifiManager.setMinimumSignalQuality(MinimumWifiSignalQuality);
@@ -1237,6 +1261,7 @@ void setup_wifimanager(bool reset_settings) {
     strcpy(mqtt_pass, custom_mqtt_pass.getValue());
     strcpy(mqtt_topic, custom_mqtt_topic.getValue());
     strcpy(gateway_name, custom_gateway_name.getValue());
+    strcpy(watchdogPin, custom_watchdogPin.getValue());    
     mqtt_secure = *custom_mqtt_secure.getValue();
 
     int cert_len = strlen(custom_mqtt_cert.getValue());
@@ -1574,6 +1599,7 @@ void stateMeasures() {
 #  endif
 #  ifdef ZgatewayBT
 #    ifdef ESP32
+  SYSdata["watchdog pin"] = Watchdog_Pin;
   SYSdata["lowpowermode"] = (int)lowpowermode;
   SYSdata["btqblck"] = btQueueBlocked;
   SYSdata["btqsum"] = btQueueLengthSum;

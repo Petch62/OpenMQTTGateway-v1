@@ -29,7 +29,7 @@
 #define user_config_h
 /*-------------------VERSION----------------------*/
 #ifndef OMG_VERSION
-#  define OMG_VERSION "version_tag"
+#  define OMG_VERSION "v1.0.1"
 #endif
 
 /*-------------CONFIGURE WIFIMANAGER-------------(only ESP8266 & SONOFF RFBridge)*/
@@ -52,7 +52,7 @@
 
 // Uncomment to use the MAC address in the format of 112233445566 as the gateway name
 // Any definition of Gateway_Name will be ignored. The Gateway_Short_name _ MAC will be used as the access point name.
-//#define USE_MAC_AS_GATEWAY_NAME
+#define USE_MAC_AS_GATEWAY_NAME
 #ifndef Gateway_Name
 #  define Gateway_Name "OpenMQTTGateway"
 #endif
@@ -165,10 +165,14 @@ const byte mac[] = {0xDE, 0xED, 0xBA, 0xFE, 0x54, 0x95}; //W5100 ethernet shield
 #  define MQTT_PASS "your_password"
 #endif
 #ifndef MQTT_SERVER
-#  define MQTT_SERVER "192.168.1.17"
+#  define MQTT_SERVER "192.168.1.50"
 #endif
 #ifndef MQTT_PORT
 #  define MQTT_PORT "1883"
+#endif
+
+#ifndef Watchdog_Pin
+#  define Watchdog_Pin "26"
 #endif
 
 #if defined(ESP8266) || defined(ESP32)
@@ -315,9 +319,9 @@ int lowpowermode = DEFAULT_LOW_POWER_MODE;
 //#define ZsensorBH1750  "BH1750"   //ESP8266, Arduino, ESP32
 //#define ZsensorTSL2561 "TSL2561"  //ESP8266, Arduino, ESP32
 //#define ZsensorBME280  "BME280"   //ESP8266, Arduino, ESP32
-//#define ZsensorHTU21   "HTU21"    //ESP8266, Arduino, ESP32
+#define ZsensorHTU21   "HTU21"    //ESP8266, Arduino, ESP32
 //#define ZsensorDHT     "DHT"      //ESP8266, Arduino, ESP32,  Sonoff RF Bridge
-//#define ZsensorDS1820  "DS1820"   //ESP8266, Arduino, ESP32
+#define ZsensorDS1820  "DS1820"   //ESP8266, Arduino, ESP32
 //#define ZsensorGPIOKeyCode "GPIOKeyCode" //ESP8266, Arduino, ESP32
 //#define ZsensorGPIOInput "GPIOInput" //ESP8266, Arduino, ESP32
 //#define ZmqttDiscovery "HADiscovery"//ESP8266, Arduino, ESP32, Sonoff RF Bridge
@@ -426,9 +430,9 @@ int lowpowermode = DEFAULT_LOW_POWER_MODE;
 #endif
 
 #ifdef ESP8266
-//#  define TRIGGER_GPIO 14 // pin D5 as full reset button (long press >10s)
+#  define TRIGGER_GPIO 14 // pin D5 as full reset button (long press >10s)
 #elif ESP32
-//#  define TRIGGER_GPIO 0 // boot button as full reset button (long press >10s)
+#  define TRIGGER_GPIO 0 // boot button as full reset button (long press >10s)
 #endif
 
 //      VCC   ------------D|-----------/\/\/\/\ -----------------  Arduino PIN
