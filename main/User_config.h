@@ -29,7 +29,7 @@
 #define user_config_h
 /*-------------------VERSION----------------------*/
 #ifndef OMG_VERSION
-#  define OMG_VERSION "v1.0.1"
+#  define OMG_VERSION "v1.0.2"
 #endif
 
 /*-------------CONFIGURE WIFIMANAGER-------------(only ESP8266 & SONOFF RFBridge)*/
